@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <title>knock.html</title>
+  <style>
+    h1 {
+      font-family: Georgia, "Times New Roman", Times, serif;
+      color: #0087BD;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    label, button, ul {
+      clear: both;
+    }
+    label, button {
+      width: 8em;
+    }
+    label, input, button, ul {
+      float: left;
+    }
+    li.error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+ </head>
+ <body>
+  <h1>knock.html</h1>
+  <p class="warning">knock.html only supports <code>tcp</code> packets and only the <code>syn</code> flag
+  and e.g. in Firefox some <a href="http://www-archive.mozilla.org/projects/netlib/PortBanning.html#portlist">ports are blocked!</a></p>
+
+  <form>
+    <label for="host">Host:</label>
+    <input type="text" name="host" id="host" />
+
+    <label for="port_seq">Port Sequence:</label>
+    <input type="text" name="port_seq" id="port_seq" />
+
+    <input type="hidden" name="auto" value="1" />
+
+    <button type="button" id="knock">knock</button>
+    <button type="submit" id="knockmarklet">knockmarklet</button>
+
+    <ul id="log"></ul>
+  </form>
+
+
+  <script type="application/javascript">
+    var ul = document.getElementById('log');
+
+    function execKnock(host, port_seq) {
+      var li = document.createElement("li");
+
+      // knock on next port
+      try {
+        var req = new XMLHttpRequest();
+        var port = port_seq.shift()
+        var url = 'http://'+host+":"+port;
+        req.open('GET', url, true); 
+        req.send(null);
+      }
+      catch(e) {
+        var txt = document.createTextNode("Error knocking on port "+port+"!");
+        li.classList.add("error");
+        li.appendChild(txt);
+        ul.appendChild(li);
+        return;
+      }
+
+      // add log
+      var txt = document.createTextNode("Knocking at port "+port+"…");
+      li.appendChild(txt);
+      ul.appendChild(li);
+
+      // done?
+      if(port_seq.length == 0) {
+        var li = document.createElement("li");
+        var txt = document.createTextNode("done!");
+        li.appendChild(txt);
+        ul.appendChild(li);
+      }
+      else {
+        // wait 250ms and proceed with next port
+        window.setTimeout(function() { execKnock(host, port_seq); }, 250);
+      }
+    }
+
+
+    function knock() {
+      var port_seq = document.getElementById('port_seq').value.split(',');
+      var host = document.getElementById('host').value;
+
+      // parse port_seq
+      var parsed_port_seq = [];
+      for(var i in port_seq) {
+        var p = parseInt(port_seq[i]);
+        if(!isNaN(p))
+          parsed_port_seq.push(p);
+      }
+      // parse host
+      parsed_host = host.replace(' ', '');
+
+      // clear log
+      while (ul.firstChild) {
+        ul.removeChild(ul.firstChild);
+      }
+
+      execKnock(parsed_host, parsed_port_seq);
+    }
+
+
+    document.getElementById("knock").addEventListener("click", knock, false);
+
+    (function parseParameters() {
+      var prmstr = decodeURIComponent(window.location.search.substr(1));
+      var prmarr = prmstr.split("&");
+
+      var params = {};
+      for ( var i = 0; i < prmarr.length; i++) {
+        var tmparr = prmarr[i].split("=");
+        params[tmparr[0]] = tmparr[1];
+      }
+      if(params.host !== undefined)
+        document.getElementById('host').value = params.host;
+      if(params.port_seq !== undefined)
+        document.getElementById('port_seq').value = params.port_seq
+
+      if(params.auto == 1)
+        knock();
+    })()
+
+  </script>
+ </body>
+</html>
+
